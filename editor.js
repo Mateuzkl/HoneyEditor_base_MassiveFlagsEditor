@@ -1952,13 +1952,43 @@ window.confirmExportSprDat = async function() {
 })();
 
 // ============ Carga inicial ============
-window.startEditor = async function () {
-  const versionFile = $('startVersionFile')?.files?.[0];
-  const datFile     = $('startDatFile')?.files?.[0];
-  const sprFile     = $('startSprFile')?.files?.[0];
+// ============ Carga inicial ============
 
-  if (!versionFile || !datFile || !sprFile) {
-    return alert('Selecciona versions.xml, .dat y .spr');
+// Nueva lógica de selección de carpeta
+window.handleFolderSelection = async function(input) {
+  if (!input.files || input.files.length === 0) return;
+  
+  const files = Array.from(input.files);
+  const status = document.getElementById('folderStatus');
+  if (status) status.innerHTML = 'Analizando archivos...';
+
+  // Buscar archivos
+  const sprFile = files.find(f => f.name.toLowerCase().endsWith('.spr'));
+  const datFile = files.find(f => f.name.toLowerCase().endsWith('.dat'));
+  const xmlFile = files.find(f => f.name.toLowerCase() === 'versions.xml');
+
+  if (!sprFile || !datFile) {
+    if (status) status.innerHTML = '<span style="color:var(--danger)">❌ No se encontraron .spr y .dat en la carpeta.</span>';
+    return;
+  }
+
+  // Asignar a los inputs ocultos si existen (para compatibilidad) o usar directamente
+  // Inyectar en startEditor
+  
+  if (status) status.innerHTML = `✅ Encontrados: ${sprFile.name}, ${datFile.name}${xmlFile ? ' y versions.xml' : ''}`;
+
+  // Auto-start
+  await window.startEditor(xmlFile, datFile, sprFile);
+}
+
+window.startEditor = async function (manualVersion, manualDat, manualSpr) {
+  // 1. Obtener archivos (ya sea de argumentos o de inputs manuales)
+  const versionFile = manualVersion || $('startVersionFile')?.files?.[0];
+  const datFile     = manualDat     || $('startDatFile')?.files?.[0];
+  const sprFile     = manualSpr     || $('startSprFile')?.files?.[0];
+
+  if (!datFile || !sprFile) {
+    return alert('Se requieren al menos los archivos .dat y .spr');
   }
 
   const overlay      = $('overlay');
@@ -1966,7 +1996,6 @@ window.startEditor = async function () {
   const progressFill = $('progressFill');
 
   // --- Accessibility / focus handling:
-  // poner la app en 'inert' mientras el modal/overlay de carga esté visible
   const appEl = document.getElementById('app');
   const startupModal = document.getElementById('startupModal');
   try { if (appEl) appEl.setAttribute('inert', ''); } catch(e){}
@@ -1990,7 +2019,16 @@ window.startEditor = async function () {
 
   try {
     setProgress(10);
-    await versionManager.loadXML(versionFile);
+    
+    // Cargar version.xml si existe
+    if (versionFile) {
+        try {
+             await versionManager.loadXML(versionFile);
+        } catch(e) {
+            console.warn("No se pudo cargar versions.xml", e);
+        }
+    }
+    
     setProgress(30);
 
     const [sprBuf, datBuf] = await Promise.all([sprFile.arrayBuffer(), datFile.arrayBuffer()]);
@@ -1998,15 +2036,20 @@ window.startEditor = async function () {
 
     const sprSig = new DataView(sprBuf).getUint32(0, true);
     const datSig = new DataView(datBuf).getUint32(0, true);
-    const ver = versionManager.getVersionFromSignatures(datSig, sprSig);
-    // --- MODIFICACIÓN: Permitir abrir aunque no detecte Transparency/Extended ---
-    // Si no detecta versión, continuar igual (no lanzar error)
+    
+    let ver = null;
+    if (versionManager.versions.length > 0) {
+        ver = versionManager.getVersionFromSignatures(datSig, sprSig);
+    }
+    
+    // --- Lógica de versión desconocida / auto-detect ---
     if (!ver) {
-      // Permitir abrir archivos .dat/.spr aunque no estén en versions.xml
-      detectedVersion = { name: 'Desconocida', dat: datSig, spr: sprSig };
+      detectedVersion = { name: 'Autodetectada / Desconocida', dat: datSig, spr: sprSig };
+      // Intentar inferir versiones conocidas por firmas comunes si fuera necesario
     } else {
       detectedVersion = ver;
     }
+    
     const vi = $('versionInfo');
     if (vi) {
       vi.innerHTML = `
@@ -2020,12 +2063,11 @@ window.startEditor = async function () {
     spr = new SprParser(sprBuf);
     dat = new DatParser(datBuf);
 
-    // Exponer como globales para módulos auxiliares (constructor y auditoría)
+    // Exponer como globales
     try { window.spr = spr; window.dat = dat; } catch(_){}
 
     // UI
     ensureExportUI();
-    // reconstruye la grilla de flags con la firma cargada
     if (window.DAT_EDITOR?.ensureFlagsGrid) window.DAT_EDITOR.ensureFlagsGrid(true);
     updateThingCountsUI();
     showThingList(currentCategory);
@@ -2033,13 +2075,12 @@ window.startEditor = async function () {
 
     setProgress(100);
 
-    // ocultar overlay y restaurar interacción a la app (quitar inert)
+    // ocultar overlay y restaurar interacción
     setTimeout(() => {
       if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true'); }
       try { if (appEl) appEl.removeAttribute('inert'); } catch(e){}
     }, 250);
   } catch (err) {
-    // en error: ocultar overlay, restaurar startup modal y quitar inert para accesibilidad
     if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true'); }
     try { if (appEl) appEl.removeAttribute('inert'); } catch(e){}
     if (startupModal) { startupModal.style.display = ''; startupModal.removeAttribute('aria-hidden'); }
