@@ -1,0 +1,34 @@
+/* otbStyles.css â€” Dark, rÃ¡pido, sin dependencias. Pensado para Chrome. */
+
+/* Modal */
+#otbEditorPanel.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+#otbEditorPanel.modal:not(.hidden){display:flex}
+#otbEditorPanel .modal-content{background:#0d1929;color:#eaf1ff;border:1px solid #20344f;border-radius:12px;padding:10px;min-width:980px;max-height:84vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+#otbEditorPanel .bar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+#otbEditorPanel .bar .flex{flex:1 1 auto}
+#otbEditorPanel .bar input{background:#0a1320;color:#dfe7ff;border:1px solid #20344f;border-radius:8px;padding:6px 8px;min-width:260px}
+#otbEditorPanel button{background:#16243a;color:#dfe7ff;border:1px solid #2b3b56;border-radius:8px;padding:6px 10px;cursor:pointer}
+#otbEditorPanel .muted{opacity:.75;font-size:12px}
+
+/* Layout */
+#otbEditorPanel .grid2{display:grid;grid-template-columns:360px 1fr;gap:10px;min-height:60vh}
+#otbEditorPanel .left{display:flex;flex-direction:column;min-width:0}
+#otbEditorPanel .right{overflow:auto;border:1px solid #20344f;border-radius:10px}
+
+/* Tabla propiedades */
+#otbEditorPanel table.grid{border-collapse:collapse;width:100%}
+#otbEditorPanel table.grid th,#otbEditorPanel table.grid td{border-bottom:1px solid #20344f;padding:6px 8px;text-align:left;vertical-align:middle}
+#otbEditorPanel input[type="number"],#otbEditorPanel input[type="text"]{background:#0a1320;color:#dfe7ff;border:1px solid #20344f;border-radius:6px;padding:4px 6px;width:100%}
+#otbEditorPanel .flags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+#otbEditorPanel .flags label{display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+
+/* Lista virtualizada */
+#otbEditorPanel .otb-list{position:relative;overflow:auto;border:1px solid #20344f;border-radius:10px;height:60vh;background:#0a1320}
+#otbEditorPanel .otb-vp{position:absolute;top:0;left:0;right:0}
+#otbEditorPanel .otb-phantom{width:1px;opacity:0}
+#otbEditorPanel .otb-row{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid #0f1c2e;box-sizing:border-box}
+#otbEditorPanel .otb-row:hover{background:#0e1a2b}
+#otbEditorPanel .otb-row.sel{background:#132239}
+#otbEditorPanel .otb-row .thumb{width:36px;height:36px;image-rendering:pixelated;border-radius:6px;border:1px solid #20344f;background:#0d1929}
+#otbEditorPanel .otb-row .title{font-size:13px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56%}
+#otbEditorPanel .otb-row .meta{margin-left:auto;font-size:12px;color:#a9b8d1}

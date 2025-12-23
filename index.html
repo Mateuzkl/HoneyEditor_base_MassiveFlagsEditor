@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>🛠️ Honey Editor</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+
+    <style id="dpadStyles">
+        /* Mantiene los estilos DPad existentes */
+        .dpad { display:grid; grid-template-areas:
+            ". up ."
+            "left center right"
+            ". down .";
+            gap:8px; place-items:center; margin-top:8px; user-select:none; }
+        .dpad button{ width:38px; height:38px; border-radius:10px; border:1px solid var(--border,#2b3b56);
+            background:#171e2e; color:#eaf1ff; font-size:18px; line-height:1; box-shadow:0 2px 0 rgba(0,0,0,.35); }
+        .dpad button:hover{ filter:brightness(1.1); }
+        .dpad button.active{ outline:2px solid #51a3ff; }
+        .dpad .up{ grid-area: up; }
+        .dpad .down{ grid-area: down; }
+        .dpad .left{ grid-area: left; }
+        .dpad .right{ grid-area: right; }
+        .dpad .center{ grid-area: center; font-size:12px; width:auto; height:auto; padding:2px 8px;
+            border-radius:8px; background:transparent; border:0; color:#9fb3c8; }
+        .credits-banner {
+            text-align: center;
+            background: #0f1f3bb0;
+            color: #8f681d;
+            padding: 5px 0;
+            font-size: 14px;
+            font-weight: bold;
+            border-bottom: 2px solid #51a3ff;
+        }
+
+        /*
+        *************************************************
+        * ESTILOS ADICIONALES PARA LAS MEJORAS SOLICITADAS *
+        *************************************************
+        */
+
+        /* Contenedor de Pestañas (Scrollable) */
+        .tab-bar-container {
+            /* Flex para alinear las tabs horizontalmente */
+            display: flex;
+            overflow-x: auto; /* Habilita el desplazamiento horizontal */
+            -webkit-overflow-scrolling: touch; /* Suaviza el scroll en iOS */
+            padding-bottom: 8px; /* Espacio para la sombra o el scrollbar */
+            margin-bottom: 15px; /* Separa de la sección de conteos */
+            gap: 8px; /* Espacio entre botones */
+            /* Estilo visual para simular la estética futurista */
+            border-bottom: 2px solid #51a3ff33;
+        }
+
+        /* Botones de Pestaña */
+        .tab-bar-container .tab-btn {
+            /* Asegura que los botones no se encojan y mantengan su contenido */
+            flex-shrink: 0;
+            /* Estilos del botón base (asumo que 'tab-btn' ya existe en styles.css) */
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            /* Estilos futuristas */
+            background: #171e2e;
+            color: #eaf1ff;
+            border: 1px solid #2b3b56;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .tab-bar-container .tab-btn:hover {
+            background: #2b3b56;
+            border-color: #51a3ff;
+        }
+
+        .tab-bar-container .tab-btn.active {
+            background: #51a3ff;
+            color: #111;
+            border-color: #eaf1ff;
+            box-shadow: 0 0 10px #51a3ff;
+        }
+
+        /* Botón de Edición Masiva (mejorado) */
+        .bulk-edit-section {
+            /* Estilo limpio para el contenedor */
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            /* Asegura que esté bien ajustado al contenedor principal del editor */
+        }
+
+        #btnOpenBulkEditor {
+            /* Reemplaza el estilo inline con uno más limpio */
+            width: 100%;
+            padding: 10px; /* Más padding para un toque profesional */
+            margin: 0; /* Elimina el margin-top de 10px que estaba forzado */
+            background: linear-gradient(90deg, #8b5cf6, #c084fc); /* Gradiente más moderno */
+            color: white;
+            border: 1px solid #c084fc;
+            border-radius: 6px; /* Más redondeado */
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
+            transition: all 0.2s ease-in-out;
+        }
+
+        #btnOpenBulkEditor:hover {
+            opacity: 0.9;
+            box-shadow: 0 6px 12px rgba(139, 92, 246, 0.6);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="credits-banner">Honey Editor © DevMapper</div>
+    <div id="overlay" class="hidden" aria-hidden="true">
+        <div id="progressText">Cargando... <span id="progressPercent">0%</span></div>
+        <div id="progressBar"><div id="progressFill"></div></div>
+    </div>
+
+    <div id="startupModal" role="dialog" aria-modal="true" aria-labelledby="startTitle" class="startup-fx">
+        <div class="modal-content futuristic-panel startup-panel">
+            <h2 id="startTitle" class="startup-title">🚀 Bienvenido a Honey Editor</h2>
+            <p class="startup-subtitle">Selecciona tus archivos de cliente para comenzar a editar con estilo.</p>
+
+            <div id="welcomeWidget" class="welcome-widget">
+                <div class="widget-step active">
+                    <h3>📜 Paso 1: Archivo de versiones</h3>
+                    <p>Selecciona tu <strong>versions.xml</strong> para identificar la versión del cliente.</p>
+                    <p class="widget-tip">🧠 Recomendado si usas clientes clásicos sin particiones.</p>
+                </div>
+                <div class="widget-step">
+                    <h3>🧱 Paso 2: Cliente clásico (.dat / .spr)</h3>
+                    <p>Carga tus archivos <strong>.dat</strong> y <strong>.spr</strong> para comenzar a editar.</p>
+                    <p class="widget-tip">🎯 Compatible con versiones 7.4 a 12.86.</p>
+                </div>
+                <div class="widget-step">
+                    <h3>📁 Paso 3: Cliente por partes</h3>
+                    <p>Usa esta opción si tienes <code>part_1.spr</code>, <code>part_2.spr</code>, <code>part_3.spr</code>, etc.</p>
+                    <p class="widget-tip">⚡ <strong>No necesitas versions.xml</strong> si usas esta opción.</p>
+                </div>
+                <div class="widget-controls">
+                    <button id="skipTutorialBtn" class="btn-glow">⏭️ Saltar tutorial</button>
+                    <button id="nextTutorialBtn" class="btn-glow">➡️ Siguiente</button>
+                </div>
+            </div>
+
+            <div id="startupForm" class="startup-grid hidden">
+                <fieldset class="startup-block">
+                    <legend>📜 Archivo de versiones</legend>
+                    <label class="input-label">versions.xml:
+                        <input type="file" id="startVersionFile" name="startVersionFile" accept=".xml">
+                    </label>
+                </fieldset>
+
+                <fieldset class="startup-block">
+                    <legend>🧱 Cliente clásico (.dat / .spr)</legend>
+                    <label class="input-label">DAT:
+                        <input type="file" id="startDatFile" name="startDatFile" accept=".dat">
+                    </label>
+                    <label class="input-label">SPR:
+                        <input type="file" id="startSprFile" name="startSprFile" accept=".spr">
+                    </label>
+                </fieldset>
+
+                <fieldset class="startup-block">
+                    <legend>📁 Cargar desde carpeta (FileParts)</legend>
+                    <p class="muted">Usa esta opción si tienes tibia.dat y <code>part_0001.spr</code>, <code>part_0002.spr</code>, etc.</p>
+                    <p class="muted">✅ Esta opción <strong>no requiere versions.xml</strong>.</p>
+                    <button id="startChooseFolderBtn" type="button" class="btn-glow">Elegir carpeta…</button>
+                    <div id="startFolderSummary" class="muted"></div>
+                </fieldset>
+
+                <div class="startup-actions">
+                    <button onclick="startEditor()" class="btn-primary btn-glow">✨ Cargar Editor</button>
+                    <div class="startup-tip">
+                        💡 Consejo: Usa archivos por partes para clientes grandes o personalizados.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="app" inert>
+        <aside id="sidebar">
+            <label for="thingCategory">Tipo:
+                <select id="thingCategory" name="thingCategory" onchange="changeThingCategory(this.value)">
+                    <option value="item">Items</option>
+                    <option value="outfit">Outfits</option>
+                    <option value="effect">Effects</option>
+                    <option value="missile">Missiles</option>
+                </select>
+            </label>
+            <input type="text" id="searchInput" name="searchInput" placeholder="🔍 Buscar..." oninput="filterList()" />
+            <label class="checkline">
+                <input type="checkbox" id="hideInvisibleToggle" name="hideInvisibleToggle" checked> Ocultar sprites invisibles
+            </label>
+            <div id="thingStats" class="muted" style="margin:.25rem 0 .5rem 0">0 visibles</div>
+            <div id="spriteListContainer"><div id="spriteList"></div></div>
+            <div id="paginationControls"></div>
+
+            <div class="stack">
+                <button class="btn-primary" id="exportSprDatBtn" type="button">💾 Exportar .spr y .dat</button>
+            </div>
+        </aside>
+
+        <main id="editor">
+            <h1>Honey Thing Editor</h1>
+
+            <section class="editor-toolbar-group">
+                <nav id="mainTabs" role="tablist" aria-label="Editor Modes" class="tab-bar-container">
+                    <button class="tab-btn" type="button" onclick="openThingConstructorFromUI()">🧩 Constructor</button>
+                    <script defer src="thing-constructor.v3.9-ui.js"></script>
+                    <button class="tab-btn" onclick="openFlagAudit()">🧪 Flag Audit</button>
+                    <button class="tab-btn" onclick="OTBEditor.open()">Otb Editor</button>
+                    <button class="tab-btn" type="button" onclick="window.Reemplazador && window.Reemplazador.open()">🔁 Remplazador</button>
+                    <button class="tab-btn" type="button" onclick="window.HdBridge && window.HdBridge.open()">🖼️ HD Texture Bridge</button>
+                    <button id="btnFxLab" class="tab-btn" type="button" onclick="(window.FxLab || window.fxLab) && (window.FxLab || window.fxLab).open()">⚡ FX Lab</button>
+                    <button id="btnArcheologist" class="tab-btn" type="button" onclick="window.ThingArcheologist && window.ThingArcheologist.open()">🧬 Arqueólogo</button>
+                </nav>
+
+                <button class="btn-secondary" onclick="exportRenderedThingFullSpritesheet()" style="margin-bottom: 15px;">🧩 Exportar FULL Spritesheet</button>
+
+                <div class="bulk-edit-section">
+                    <button id="btnOpenBulkEditor">✨ EDICIÓN MASIVA</button>
+                </div>
+            </section>
+            <div id="thingCounts" class="counts">📦 Items: 0 | 🧍 Outfits: 0 | ✨ Effects: 0 | 🏹 Missiles: 0</div>
+
+            <div class="canvas-controls-row">
+                <div id="canvasWrapper">
+                    <div id="canvasContainer">
+                        <canvas id="canvas" width="32" height="32"></canvas>
+                    </div>
+                    <div class="top-info__mid zoom-overlay">
+                        <label class="zoom-inline" for="zoom">Zoom:
+                            <input type="range" id="zoom" min="1" max="5" value="3" />
+                            <span id="zoomVal">3×</span>
+                        </label>
+                    </div>
+
+                    <div id="thingInfo" class="muted" style="margin-top:.5rem"></div>
+                </div>
+
+                <section class="controlsBox" aria-labelledby="ctrlTitle">
+                    <h3 id="ctrlTitle">Controles de Visualización</h3>
+                    <div class="visual-controls">
+                        <div class="control-row"><label for="mount">Mount:</label><input type="range" id="mount" name="mount" min="0" max="1" value="0"></div>
+                        <div class="control-row"><label for="addons">Addons:</label>
+                            <select id="addons" name="addons"><option value="0">0 (Base)</option><option value="1">1</option><option value="2">2</option><option value="3">3 (Full Addon)</option></select>
+                        </div>
+                        <div class="control-row"><label for="frame">Frame:</label><input type="number" id="frame" name="frame" min="0" value="0"></div>
+                        <div class="control-row"><label for="layer">Layer:</label><input type="number" id="layer" name="layer" min="0" value="0"></div>
+                        <div class="control-row"><label for="patternX">Pattern X:</label><input type="number" id="patternX" name="patternX" min="0" value="2"></div>
+                        <div class="control-row"><label for="patternY">Pattern Y:</label><input type="number" id="patternY" name="patternY" min="0" value="0"></div>
+                        <div class="control-row"><label for="patternZ">Pattern Z:</label><input type="number" id="patternZ" name="patternZ" min="0" value="0"></div>
+                        <div class="control-row">
+                            <label style="display:block;width:100%">Dirección:</label>
+                            <div id="dpad" class="dpad" aria-label="Dirección" data-mode="4">
+                                <button id="dirUL" class="ul"  title="NO (Pattern X=7)">↖</button>
+                                <button id="dirUp" class="up"   title="Arriba (Pattern X=0)">▲</button>
+                                <button id="dirUR" class="ur"  title="NE (Pattern X=4)">↗</button>
+
+                                <button id="dirLeft" class="left" title="Izquierda (Pattern X=3)">◀</button>
+                                <button id="dirCenter" class="center" disabled>Dirección</button>
+                                <button id="dirRight" class="right" title="Derecha (Pattern X=1)">▶</button>
+
+                                <button id="dirDL" class="dl"  title="SO (Pattern X=6)">↙</button>
+                                <button id="dirDown" class="down" title="Abajo (Pattern X=2)">▼</button>
+                                <button id="dirDR" class="dr"  title="SE (Pattern X=5)">↘</button>
+                            </div>
+                        </div>
+
+                        <div class="control-row"><label for="groupSelector">Grupo:</label>
+                            <select id="groupSelector" name="groupSelector">
+                                <option value="0">Idle</option>
+                                <option value="1">Walking</option>
+                            </select>
+                        </div>
+                        <div class="control-row"><label for="frameDelay">Animación (ms):</label><input type="number" id="frameDelay" name="frameDelay" value="100" min="1"></div>
+                        <div class="control-row full-width">
+                            <button onclick="toggleFrameAnimation()" name="btnToggleFrameAnimation">🎬 Animar Frames</button>
+                            <button onclick="toggleGrid()" name="btnToggleGrid">🟪 Mostrar/Ocultar Grid</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section id="thingPropertiesPanel" class="panel section futuristic-panel">
+                <div class="panel-header">
+                  <h3>Propiedades (thingInfo)</h3>
+                  <div class="row gap-8">
+                    <button class="btn btn--ok" id="datApplyBtn">💾 Guardar</button>
+                    <button class="btn" id="datResetBtn">⟲ Reset</button>
+                    <button class="btn toggle-flags-btn" id="datToggleFlagsBtn">⚑ Mostrar/Ocultar Banderas</button>
+                  </div>
+                </div>
+              
+                <!-- BANDERAS: OCUPA TODO EL ANCHO -->
+                <fieldset id="datFlagsWrap" class="group mt-8 futuristic-group full-width-group">
+                  <legend>Banderas</legend>
+                  <div class="flags-toolbar">
+                    <input id="flagSearch" name="flagSearch" type="search" placeholder="Buscar flag…" />
+                    <select id="flagFilter" name="flagFilter"><option value="">(Todas)</option></select>
+                    <input id="flagsBitmaskPreview" name="flagsBitmaskPreview" type="text" readonly placeholder="0x00000000" />
+                  </div>
+                  <div id="flagCheckboxes" class="flags-grid"></div>
+                  <div id="unknownFlagsList" class="row unknown-flags"></div>
+                </fieldset>
+              
+                <!-- PROPIEDADES: EN 2 COLUMNAS DEBAJO -->
+                <div class="properties-grid grid--2">
+                  <div class="col">
+                    <fieldset class="group futuristic-group">
+                      <legend>Es Piso</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_isFloor" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Ground Speed
+                        <input id="prop_groundSpeed" type="number" min="0" max="65535" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Tiene Luz</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasLight" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Light Color
+                        <input id="prop_lightColor" type="text" placeholder="#RRGGBB o 0..255" />
+                      </label>
+                      <label class="input-label">
+                        Light Intensity
+                        <input id="prop_lightIntensity" type="number" min="0" max="255" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Automapa</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasAutomap" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Automap Color
+                        <input id="prop_automapColor" type="text" placeholder="#RRGGBB o 0..255" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Desplazamiento</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasOffset" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Offset X
+                        <input id="prop_offsetX" type="number" min="-255" max="255" />
+                      </label>
+                      <label class="input-label">
+                        Offset Y
+                        <input id="prop_offsetY" type="number" min="-255" max="255" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Tiene Elevación</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasElevation" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Elevation
+                        <input id="prop_elevation" type="number" min="0" max="65535" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Escribible / Una vez</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_writable" type="checkbox" /><span class="slider"></span></span>
+                        Escribible
+                      </label>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_writableOnce" type="checkbox" /><span class="slider"></span></span>
+                        Escribible Una Vez
+                      </label>
+                      <label class="input-label">
+                        Máxima Longitud
+                        <input id="prop_maxTextLen" type="number" min="0" max="65535" />
+                      </label>
+                    </fieldset>
+                  </div>
+              
+                  <div class="col">
+                    <fieldset class="group futuristic-group">
+                      <legend>Equipo</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasEquipment" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Slot
+                        <select id="prop_slot">
+                          <option value="1">Armors</option>
+                          <option value="2">Amulets</option>
+                          <option value="3">Boots</option>
+                          <option value="4">Containers</option>
+                          <option value="5">Decoration</option>
+                          <option value="6">Food</option>
+                          <option value="7">Helmets & Hats</option>
+                          <option value="8">Legs</option>
+                          <option value="9">Others</option>
+                          <option value="10">Potions</option>
+                          <option value="11">Rings</option>
+                          <option value="12">Runes</option>
+                          <option value="13">Shields</option>
+                          <option value="14">Tools</option>
+                          <option value="15">Valuables</option>
+                          <option value="16">Ammunition</option>
+                          <option value="17">Axes</option>
+                          <option value="18">Clubs</option>
+                          <option value="19">Distance Weapons</option>
+                          <option value="20">Swords</option>
+                          <option value="21">Wands & Rods</option>
+                          <option value="22">Premium Scrolls</option>
+                          <option value="255">Meta Weapons</option>
+                        </select>
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Mercado</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasMarket" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Name
+                        <input id="prop_mktName" type="text" />
+                      </label>
+                      <label class="input-label">
+                        Category
+                        <select id="prop_mktCategory">
+                          <option value="1">Armors</option>
+                          <option value="2">Amulets</option>
+                          <option value="3">Boots</option>
+                          <option value="4">Containers</option>
+                          <option value="5">Decoration</option>
+                          <option value="6">Food</option>
+                          <option value="7">Helmets & Hats</option>
+                          <option value="8">Legs</option>
+                          <option value="9">Others</option>
+                          <option value="10">Potions</option>
+                          <option value="11">Rings</option>
+                          <option value="12">Runes</option>
+                          <option value="13">Shields</option>
+                          <option value="14">Tools</option>
+                          <option value="15">Valuables</option>
+                          <option value="16">Ammunition</option>
+                          <option value="17">Axes</option>
+                          <option value="18">Clubs</option>
+                          <option value="19">Distance Weapons</option>
+                          <option value="20">Swords</option>
+                          <option value="21">Wands & Rods</option>
+                          <option value="22">Premium Scrolls</option>
+                          <option value="255">Meta Weapons</option>
+                        </select>
+                      </label>
+                      <label class="input-label">
+                        Trade As
+                        <input id="prop_mktTradeAs" type="number" min="0" max="65535" />
+                      </label>
+                      <label class="input-label">
+                        Show As
+                        <input id="prop_mktShowAs" type="number" min="0" max="65535" />
+                      </label>
+                      <label class="input-label">
+                        Vocation
+                        <input id="prop_mktVocation" type="number" min="0" max="255" />
+                      </label>
+                      <label class="input-label">
+                        Level
+                        <input id="prop_mktLevel" type="number" min="0" max="65535" />
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Lente de Ayuda</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasHelpLens" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Type
+                        <select id="prop_helpLensType">
+                          <option value="0">None</option>
+                          <option value="1">Ladders</option>
+                          <option value="2">Sewer Grates</option>
+                          <option value="3">Dungeon Floor</option>
+                          <option value="4">Levers</option>
+                          <option value="5">Doors</option>
+                          <option value="6">Special Doors</option>
+                          <option value="7">Stairs</option>
+                          <option value="8">Mailboxes</option>
+                          <option value="9">Depot Boxes</option>
+                          <option value="10">Dustbins</option>
+                          <option value="11">Stone Piles</option>
+                          <option value="12">Signs</option>
+                          <option value="13">Books and Scrolls</option>
+                        </select>
+                      </label>
+                    </fieldset>
+              
+                    <fieldset class="group futuristic-group">
+                      <legend>Tiene Acción</legend>
+                      <label class="switch-label">
+                        <span class="switch"><input id="prop_hasAction" type="checkbox" /><span class="slider"></span></span>
+                        ON/OFF
+                      </label>
+                      <label class="input-label">
+                        Tipo Acción
+                        <select id="prop_actionType">
+                          <option value="0">None</option>
+                          <option value="1">Look</option>
+                          <option value="2">Use</option>
+                          <option value="3">Open</option>
+                          <option value="4">Autowalk Highlight</option>
+                        </select>
+                      </label>
+                    </fieldset>
+                  </div>
+                </div>
+              </section>
+            <section id="slicerEditor" class="hidden futuristic-panel" role="region" aria-labelledby="slicerTitle">
+                <h2 id="slicerTitle">🧬 Slicer Editor</h2>
+                <div class="slicer-row futuristic-row">
+                    <label>Fuente:
+                        <select id="slicerSourceSelect">
+                            <option value="currentThing">Thing actual</option>
+                            <option value="sprite">Sprite individual</option>
+                            <option value="custom">Canvas/PNG</option>
+                        </select>
+                    </label>
+                    <label>Grid:
+                        <input id="slicerGridW" type="number" min="1" value="32" /> ×
+                        <input id="slicerGridH" type="number" min="1" value="32" />
+                    </label>
+                    <label>Overlap:
+                        <input id="slicerOverlap" type="number" min="0" value="0" />
+                    </label>
+                    <button id="slicerAutoSliceBtn">Auto-slice</button>
+                    <button id="slicerClearBtn">Limpiar slices</button>
+                    <button id="slicerExportBtn">Exportar slices</button>
+                </div>
+
+                <div class="slicer-main futuristic-grid">
+                    <div class="slicer-left">
+                        <div class="slicer-canvas-wrap futuristic-canvas">
+                            <canvas id="slicerSourceCanvas" width="256" height="256"></canvas>
+                        </div>
+                        <div class="slicer-controls futuristic-row">
+                            <label>Snap a grid: <input id="slicerSnapGrid" type="checkbox" checked></label>
+                            <label>Preset:
+                                <select id="slicerPreset">
+                                    <option value="tiles32">Tiles 32×32</option>
+                                    <option value="tiles16">Tiles 16×16</option>
+                                    <option value="auto">Auto heuristic</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <aside class="slicer-right futuristic-sidebar">
+                        <h3>Slices</h3>
+                        <div id="slicerList" class="slicer-list"></div>
+                        <h4>Preview</h4>
+                        <canvas id="slicerPreview" width="128" height="128"></canvas>
+                        <div class="slicer-actions futuristic-row">
+                            <button id="slicerUndoBtn">Undo</button>
+                            <button id="slicerRedoBtn">Redo</button>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+
+        <aside id="spritePreviewPanel">
+            <section class="panel-section">
+                <h3>Controles</h3>
+                <div class="button-grid">
+                    <button onclick="exportCurrentThingOBD()">📤 Exportar/obd</button>
+                    <button onclick="importFromOBD()">📥 Importar/obd</button>
+                </div>
+            </section>
+
+            <section class="panel-section sprite-grid-section">
+                <h3>Sprites del Thing</h3>
+                <div id="spriteCount" style="margin-bottom:4px;font-size:10.5px;color:#888;"></div>
+                <div id="spriteGrid"></div>
+            </section>
+        </aside>
+    </div>
+
+    <script>
+        const steps = document.querySelectorAll('.widget-step');
+        const nextBtn = document.getElementById('nextTutorialBtn');
+        const skipBtn = document.getElementById('skipTutorialBtn');
+        const form = document.getElementById('startupForm');
+        let currentStep = 0;
+
+        nextBtn.onclick = () => {
+            steps[currentStep].classList.remove('active');
+            currentStep++;
+            if (currentStep < steps.length) {
+                steps[currentStep].classList.add('active');
+            } else {
+                document.getElementById('welcomeWidget').classList.add('hidden');
+                form.classList.remove('hidden');
+            }
+        };
+
+        skipBtn.onclick = () => {
+            document.getElementById('welcomeWidget').classList.add('hidden');
+            form.classList.remove('hidden');
+        };
+    </script>
+
+    <script type="module" src="flagsEditor.js"></script>
+    <script type="module" src="editor.js"></script>
+    <script type="module" src="flags-audit.js"></script>
+    <script type="module" src="remplazador.js"></script>
+    <script type="module" src="hdTextureBridge.js"></script>
+    <script type="module" src="thing-archeologist.js"></script>
+    <script src="fx-lab.js"></script>
+    <script src="bulkEditor.module.js"></script>
+
+    <script src="keyboard-nav.js"></script>
+    <script type="module">
+        import { validateAssets } from './validator.js';
+        window.runValidation = () => {
+            if (typeof dat !== 'undefined' && typeof spr !== 'undefined') {
+                validateAssets(dat, spr);
+            } else {
+                alert("❌ No se han cargado los archivos .dat y .spr aún.");
+            }
+        };
+    </script>
+
+    <link rel="stylesheet" href="./otbStyles.css">
+    <script src="./otbeditor.js"></script>
+
+    <div id="sprCompareModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sprCompareTitle">
+        <div class="modal-content">
+            <h2 id="sprCompareTitle">🪞 Comparador y Reemplazo de Sprites</h2>
+
+            <div class="stack">
+                <fieldset style="border:1px solid var(--border);border-radius:var(--radius);padding:8px">
+                    <legend>Carga del pack RD (Derecha)</legend>
+                    <div class="grid2">
+                        <label>DAT (RD):
+                            <input type="file" id="cmpDatFile" accept=".dat">
+                        </label>
+                        <label>SPR (RD):
+                            <input type="file" id="cmpSprFile" accept=".spr">
+                        </label>
+                    </div>
+                    <label class="checkline">
+                        <input type="checkbox" id="cmpLivePreview" checked> Actualizar vista del Thing actual al aplicar
+                    </label>
+                </fieldset>
+
+                <div class="cmp-grid-2cols">
+                    <div class="cmp-col">
+                        <h3>Izquierda (Base .dat/.spr)</h3>
+                        <div class="cmp-toolbar">
+                            <label>Vista:
+                                <select id="cmpLeftMode" name="cmpLeftMode">
+                                    <option value="things" selected>Things (armados)</option>
+                                    <option value="sprites">Sprites (raw)</option>
+                                </select>
+                            </label>
+                            <label id="cmpLeftCatWrap">Categoría:
+                                <select id="cmpLeftCat" name="cmpLeftCat">
+                                    <option value="item">Items</option>
+                                    <option value="outfit">Outfits</option>
+                                    <option value="effect">Effects</option>
+                                    <option value="missile">Missiles</option>
+                                </select>
+                            </label>
+                            <input id="cmpLeftSearch" name="cmpLeftSearch" type="text" placeholder="Buscar ID/Nombre..." />
+                            <label class="checkline"><input type="checkbox" id="cmpLeftHideEmpty"> Ocultar vacíos</label>
+                        </div>
+                        <div id="cmpLeftList" class="cmp-list"></div>
+                        <div id="cmpLeftPager" class="cmp-pager"></div>
+                    </div>
+
+                    <div class="cmp-col">
+                        <h3>Derecha (RD .dat/.spr)</h3>
+                        <div class="cmp-toolbar">
+                            <label>Vista:
+                                <select id="cmpRightMode" name="cmpRightMode">
+                                    <option value="things" selected>Things (armados)</option>
+                                    <option value="sprites">Sprites (raw)</option>
+                                </select>
+                            </label>
+                            <label id="cmpRightCatWrap">Categoría:
+                                <select id="cmpRightCat" name="cmpRightCat">
+                                    <option value="item">Items</option>
+                                    <option value="outfit">Outfits</option>
+                                    <option value="effect">Effects</option>
+                                    <option value="missile">Missiles</option>
+                                </select>
+                            </label>
+                            <input id="cmpRightSearch" name="cmpRightSearch" type="text" placeholder="Buscar ID/Nombre..." />
+                            <label class="checkline"><input type="checkbox" id="cmpRightHideEmpty"> Ocultar vacíos</label>
+                        </div>
+                        <div id="cmpRightList" class="cmp-list"></div>
+                        <div id="cmpRightPager" class="cmp-pager"></div>
+                    </div>
+                </div>
+
+                <div id="cmpPairs" class="cmp-pairs"></div>
+
+                <div class="modal-actions">
+                    <label class="checkline">
+                        <input type="checkbox" id="cmpSaveLog"> Guardar registro de reemplazos
+                    </label>
+                    <button onclick="cmpApplyPairs()">✅ Aplicar reemplazos</button>
+                    <button onclick="cmpClearPairs()">🧹 Limpiar lista</button>
+                    <button onclick="closeSprComparator()">❌ Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+        <div class="modal-content">
+            <h2 id="exportTitle">Exportar Sprites</h2>
+            <p id="exportCountText"></p>
+            <div id="exportProgressContainer" class="progress-wrapper hidden">
+                <div id="exportProgressBar" class="progress-bar"></div>
+            </div>
+            <div id="exportProgressText" class="progress-counter"></div>
+            <div class="modal-actions">
+                <button id="confirmExportBtn">📁 Elegir carpeta y exportar</button>
+                <button onclick="closeExportModal()">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+  
+
+  <!-- Modal de exportación -->
+  <div id="exportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="modal-content">
+      <h2 id="exportTitle">Exportar Sprites</h2>
+      <p id="exportCountText"></p>
+      <div id="exportProgressContainer" class="progress-wrapper hidden">
+        <div id="exportProgressBar" class="progress-bar"></div>
+      </div>
+      <div id="exportProgressText" class="progress-counter"></div>
+      <div class="modal-actions">
+        <button id="confirmExportBtn">📁 Elegir carpeta y exportar</button>
+        <button onclick="closeExportModal()">❌ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini modal de exportación DAT/SPR -->
+  <div id="miniExportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="miniExportTitle">
+    <div class="modal-content">
+      <h2 id="miniExportTitle">Exportar .dat / .spr</h2>
+      <div class="grid2" style="gap:10px">
+        
+        <label class="checkline" title="Remover things vacíos, remapear SPR y reindexar IDs consecutivos.">
+          <input type="checkbox" id="miniExportPrune"> Compactar y eliminar vacíos
+        </label>
+      </div>
+      <fieldset style="margin-top:8px">
+        <legend>Opciones .dat</legend>
+        <label class="checkline"><input type="checkbox" id="miniExportDatExtended" checked> Extended</label>
+        <label class="checkline"><input type="checkbox" id="miniExportDatImproved" checked> Improved Animations</label>
+        <label class="checkline"><input type="checkbox" id="miniExportDatFrameGroups" checked> Frame Groups</label>
+      </fieldset>
+      <fieldset style="margin-top:8px">
+        <legend>Opciones .spr</legend>
+        <label class="checkline"><input type="checkbox" id="miniExportTransparency" checked> Transparency</label>
+  <label class="checkline" title="Divide el SPR en archivos consecutivos con tabla de offsets válida.">
+    <input type="checkbox" id="miniExportSprPartition"> Exportar por partes (FileParts)
+  </label>
+  <label>Sprites por archivo
+    <input type="number" id="miniExportSpritesPerFile" value="2000" min="100" step="1" style="width:120px">
+  </label>
+  <label class="checkline">
+    <input type="checkbox" id="miniExportZeroPad" checked> Nombres con cero padding (part_0001.spr)
+  </label>
+
+      </fieldset>
+      <p class="muted" style="margin-top:6px">Al confirmar, podrás elegir la carpeta o archivo de destino. Compatible con editores 10.98.</p>
+      <div class="modal-actions">
+        <button id="miniExportRunBtn">💾 Compilar y guardar</button>
+        <button id="miniExportCancelBtn">❌ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini modal de exportación -->
+  <div id="exportMiniModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="modal-content">
+      <h3 id="exportTitle">Exportar .dat / .spr</h3>
+      <label>Exportar a versión:
+        <select id="exportVersionSelect">
+          <option value="">Detectar automáticamente</option>
+          <option value="10.97">10.97</option>
+          <option value="10.98">10.98</option>
+          <option value="12.86">12.86</option>
+        </select>
+      </label>
+      <div class="row" style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button type="button" onclick="document.getElementById('exportMiniModal').classList.add('hidden')">Cancelar</button>
+        <button type="button" class="btn-primary" onclick="__runSprDatExport()">Exportar</button>
+      </div>
+    </div>
+</body>
+</html>
